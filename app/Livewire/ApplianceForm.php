@@ -10,6 +10,8 @@ use App\Models\PowerSetup;
 
 class ApplianceForm extends Component
 {
+    public $selectedSetupId = null;
+
     public $appliances;
     public $name = '';
     public $voltage = '12';
@@ -22,11 +24,23 @@ class ApplianceForm extends Component
     public $autonomyDays = 2;
     public $formResetCounter = 0;
 
+    public $dailyTotalWatts = 0;
+    public $dailyTotalWatts12V = 0;
+    public $dailyTotalWatts230V = 0;
+    public $totalWhWithInverterLoss = 0;
+    public $totalAh = 0;
+    public $recommendedAh = 0;
+    public $enhancedAppliances = [];
+
     protected $listeners = ['setupChanged' => 'loadSetup'];
-    public $selectedSetupId;
 
 
-
+    public function updated($property)
+    {
+        if (in_array($property, ['systemVoltage', 'inverterEfficiency', 'batteryType', 'autonomyDays'])) {
+            $this->calculateTotals(); // method that recalculates everything
+        }
+    }
     public function mount()
     {
         $this->loadAppliances();
@@ -95,29 +109,50 @@ class ApplianceForm extends Component
 
     public function render()
     {
+        $this->calculateTotals();
+
+        return view('livewire.appliance-form');
+    }
+
+
+    public function loadSetup($id)
+    {
+        logger()->info('Loading setup with ID: ' . $id);
+        $this->selectedSetupId = $id;
+
+        $setup = PowerSetup::where('id', $id)
+            ->where('user_id', Auth::id())
+            ->with('appliances')
+            ->firstOrFail();
+
+        // Populate fields
+        $this->systemVoltage = $setup->system_voltage;
+        $this->inverterEfficiency = $setup->inverter_efficiency;
+        $this->batteryType = $setup->battery_type;
+        $this->autonomyDays = $setup->autonomy_days;
+
+        $this->appliances = $setup->appliances->toArray();
+    }
+
+    public function calculateTotals()
+    {
         $dailyTotalWatts = 0;
         $dailyTotalWatts12V = 0;
         $dailyTotalWatts230V = 0;
-        $displayAppliances = [];
+        $enhancedAppliances = [];
 
         foreach ($this->appliances as $appliance) {
-            if (!isset($appliance['watts'], $appliance['hours'], $appliance['quantity'], $appliance['voltage'])) {
-                continue; // skip invalid ones
-            }
-
             $watts = $appliance['watts'];
             $hours = $appliance['hours'];
             $qty = $appliance['quantity'];
             $voltage = $appliance['voltage'];
 
             $baseWh = $watts * $hours * $qty;
-            $adjustedWh = ($voltage == '230')
+            $adjustedWh = $voltage == '230'
                 ? $baseWh / ($this->inverterEfficiency / 100)
                 : $baseWh;
 
-            $ah = $this->systemVoltage > 0
-                ? $adjustedWh / $this->systemVoltage
-                : 0;
+            $ah = $this->systemVoltage > 0 ? $adjustedWh / $this->systemVoltage : 0;
 
             if ($voltage == '230') {
                 $dailyTotalWatts230V += $adjustedWh;
@@ -127,7 +162,7 @@ class ApplianceForm extends Component
 
             $dailyTotalWatts += $adjustedWh;
 
-            $displayAppliances[] = array_merge($appliance, [
+            $enhancedAppliances[] = array_merge($appliance, [
                 'adjustedWh' => round($adjustedWh, 2),
                 'ah' => round($ah, 2),
             ]);
@@ -139,35 +174,15 @@ class ApplianceForm extends Component
             ? round($requiredWh / ($this->systemVoltage * $usablePercent), 2)
             : 0;
 
-        return view('livewire.appliance-form', [
-            'displayAppliances' => $displayAppliances,
-            'dailyTotalWatts' => round($dailyTotalWatts, 2),
-            'dailyTotalWatts12V' => round($dailyTotalWatts12V, 2),
-            'dailyTotalWatts230V' => round($dailyTotalWatts230V, 2),
-            'totalWhWithInverterLoss' => round($dailyTotalWatts12V + $dailyTotalWatts230V, 2),
-            'totalAh' => round(($dailyTotalWatts12V + $dailyTotalWatts230V) / $this->systemVoltage, 2),
-            'recommendedAh' => $recommendedAh,
-        ]);
+        // Assign results to component properties
+        $this->enhancedAppliances = $enhancedAppliances;
+        $this->dailyTotalWatts = round($dailyTotalWatts, 2);
+        $this->dailyTotalWatts12V = round($dailyTotalWatts12V, 2);
+        $this->dailyTotalWatts230V = round($dailyTotalWatts230V, 2);
+        $this->totalWhWithInverterLoss = round($dailyTotalWatts12V + $dailyTotalWatts230V, 2);
+        $this->totalAh = $this->systemVoltage > 0 ? round($this->totalWhWithInverterLoss / $this->systemVoltage, 2) : 0;
+        $this->recommendedAh = $this->systemVoltage > 0
+            ? round($this->totalWhWithInverterLoss / ($this->systemVoltage * $usablePercent), 2)
+            : 0;
     }
-
-    public function loadSetup($id)
-    {
-        $this->selectedSetupId = $id;
-
-        $setup = PowerSetup::where('id', $id)
-            ->where('user_id', Auth::id())
-            ->with('appliances')
-            ->firstOrFail();
-
-        $this->systemVoltage = $setup->system_voltage;
-        $this->inverterEfficiency = $setup->inverter_efficiency;
-        $this->batteryType = $setup->battery_type;
-        $this->autonomyDays = $setup->autonomy_days;
-
-        $this->appliances = $setup->appliances->toArray(); // safe conversion
-    }
-
-
-
-
 }
