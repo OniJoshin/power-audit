@@ -112,6 +112,9 @@ class PowerSetupSelector extends Component
     {
         $this->currentSetup = $this->setups->firstWhere('id', (int) $id);
         $this->dispatch('setupChanged', id: $id);
+
+        $this->dispatch('chart-data-updated', data: $this->applianceData);
+
     }
 
 

@@ -10,6 +10,8 @@ class PowerSummaryChart extends Component
     public $selectedSetupId;
     public $applianceData = [];
 
+    public string $chartType = 'bar';
+
     protected $listeners = ['setupChanged' => 'loadChartData'];
 
     public function loadChartData($id)
@@ -37,6 +39,11 @@ class PowerSummaryChart extends Component
                 'wh' => round($adjustedWh, 2),
             ];
         })->toArray();
+        $this->dispatch('chart-data-updated', [
+            'data' => $this->applianceData,
+            'type' => $this->chartType,
+        ]);
+
     }
 
     public function render()
