@@ -12,7 +12,7 @@
                     <h1 class="text-2xl font-bold mb-4">Power Setup and Appliance Management</h1>
                     <p class="mb-4">Manage your power setups and appliances efficiently.</p>
 
-                    <h2 class="text-lg font-bold mb-4">Power Setup</h2>
+                    <h2 class="text-lg font-bold mb-1">Power Setup</h2>
                     @livewire('power-setup-selector')
                 </div>
             </div>

@@ -11,6 +11,8 @@ use App\Models\PowerSetup;
 class ApplianceForm extends Component
 {
     public $selectedSetupId = null;
+    public $editingApplianceId = null;
+
 
     public $appliances;
     public $name = '';
@@ -85,12 +87,14 @@ class ApplianceForm extends Component
 
     public function resetForm()
     {
+        $this->editingApplianceId = null;
         $this->name = '';
         $this->voltage = '12';
         $this->watts = '';
         $this->hours = '';
         $this->quantity = 1;
     }
+
 
     public function removeAppliance($index)
     {
@@ -117,15 +121,25 @@ class ApplianceForm extends Component
 
     public function loadSetup($id)
     {
-        logger()->info('Loading setup with ID: ' . $id);
+        if (empty($id)) {
+            $this->selectedSetupId = null;
+            $this->resetForm();
+            $this->appliances = [];
+            return;
+        }
+
         $this->selectedSetupId = $id;
 
         $setup = PowerSetup::where('id', $id)
             ->where('user_id', Auth::id())
             ->with('appliances')
-            ->firstOrFail();
+            ->first();
 
-        // Populate fields
+        if (!$setup) {
+            $this->selectedSetupId = null;
+            return;
+        }
+
         $this->systemVoltage = $setup->system_voltage;
         $this->inverterEfficiency = $setup->inverter_efficiency;
         $this->batteryType = $setup->battery_type;
@@ -133,6 +147,8 @@ class ApplianceForm extends Component
 
         $this->appliances = $setup->appliances->toArray();
     }
+
+
 
     public function calculateTotals()
     {
@@ -185,4 +201,47 @@ class ApplianceForm extends Component
             ? round($this->totalWhWithInverterLoss / ($this->systemVoltage * $usablePercent), 2)
             : 0;
     }
+
+    public function editAppliance($id)
+    {
+        $appliance = Appliance::where('id', $id)
+            ->where('power_setup_id', $this->selectedSetupId)
+            ->where('user_id', Auth::id())
+            ->firstOrFail();
+
+        $this->editingApplianceId = $appliance->id;
+        $this->name = $appliance->name;
+        $this->voltage = $appliance->voltage;
+        $this->watts = $appliance->watts;
+        $this->hours = $appliance->hours;
+        $this->quantity = $appliance->quantity;
+    }
+
+    public function updateAppliance()
+    {
+        $this->validate([
+            'name' => 'required|string',
+            'voltage' => 'required|in:12,230',
+            'watts' => 'required|numeric|min:0.1',
+            'hours' => 'required|numeric|min:0',
+            'quantity' => 'required|integer|min:1',
+        ]);
+
+        Appliance::where('id', $this->editingApplianceId)
+            ->where('power_setup_id', $this->selectedSetupId)
+            ->where('user_id', Auth::id())
+            ->update([
+                'name' => $this->name,
+                'voltage' => $this->voltage,
+                'watts' => $this->watts,
+                'hours' => $this->hours,
+                'quantity' => $this->quantity,
+            ]);
+
+        $this->resetForm();
+        $this->formResetCounter++;
+        $this->loadSetup($this->selectedSetupId);
+    }
+
+
 }

@@ -37,14 +37,14 @@
 
             <div>
                 <label class="block font-medium text-gray-700">Appliance Name</label>
-                <input type="text" wire:model="name" class="w-full border rounded px-3 py-2" />
+                <input type="text" wire:model="name" wire:key="name-{{ $editingApplianceId ?? 'new' }}" class="w-full border rounded px-3 py-2" />
                 @error('name') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
             </div>
 
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                     <label class="block font-medium text-gray-700">Voltage</label>
-                    <select wire:model="voltage" class="w-full border rounded px-3 py-2">
+                    <select wire:model="voltage" wire:key="voltage-{{ $editingApplianceId ?? 'new' }}" class="w-full border rounded px-3 py-2">
                         <option value="12">12V</option>
                         <option value="230">230V</option>
                     </select>
@@ -53,26 +53,39 @@
 
                 <div>
                     <label class="block font-medium text-gray-700">Power Draw (W)</label>
-                    <input type="number" wire:model="watts" class="w-full border rounded px-3 py-2" />
+                    <input type="number" wire:model="watts" wire:key="watts-{{ $editingApplianceId ?? 'new' }}" class="w-full border rounded px-3 py-2" />
                     @error('watts') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
                 </div>
 
                 <div>
                     <label class="block font-medium text-gray-700">Hours/Day</label>
-                    <input type="number" wire:model="hours" class="w-full border rounded px-3 py-2" />
+                    <input type="number" wire:model="hours" wire:key="hours-{{ $editingApplianceId ?? 'new' }}" class="w-full border rounded px-3 py-2" />
                     @error('hours') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
                 </div>
 
                 <div>
                     <label class="block font-medium text-gray-700">Quantity</label>
-                    <input type="number" wire:model="quantity" class="w-full border rounded px-3 py-2" />
+                    <input type="number" wire:model="quantity" wire:key="quantity-{{ $editingApplianceId ?? 'new' }}" class="w-full border rounded px-3 py-2" />
                     @error('quantity') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
                 </div>
             </div>
 
-            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-semibold">
-                Add Appliance
-            </button>
+            @if ($editingApplianceId)
+                <button wire:click.prevent="updateAppliance"
+                        class="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-2 rounded font-semibold">
+                    Save Changes
+                </button>
+                <button wire:click.prevent="resetForm"
+                        class="ml-2 text-gray-600 hover:underline">
+                    Cancel
+                </button>
+            @else
+                <button type="submit"
+                        class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded font-semibold">
+                    Add Appliance
+                </button>
+            @endif
+
         </form>
 
         {{-- Appliance List --}}
@@ -92,6 +105,10 @@
                         </div>
                         <button wire:click="removeAppliance({{ $index }})" class="text-red-500 hover:text-red-700 mt-2 md:mt-0 md:ml-4">
                             Remove
+                        </button>
+                        <button wire:click="editAppliance({{ $appliance['id'] }})"
+                                class="text-blue-600 hover:text-blue-800 mr-2">
+                            Edit
                         </button>
                     </li>
                 @empty
