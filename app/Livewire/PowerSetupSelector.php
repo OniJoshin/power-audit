@@ -168,5 +168,22 @@ class PowerSetupSelector extends Component
         $this->dispatch('setupChanged', id: $this->selectedSetupId);
     }
 
+    public function deleteSetup()
+    {
+        if (!$this->selectedSetupId) return;
+
+        PowerSetup::where('id', $this->selectedSetupId)
+            ->where('user_id', Auth::id())
+            ->delete();
+
+        $this->selectedSetupId = null;
+        $this->currentSetup = null;
+        $this->editingSetup = false;
+        $this->loadSetups();
+
+        $this->dispatch('setupChanged', id: null);
+    }
+
+
 
 }

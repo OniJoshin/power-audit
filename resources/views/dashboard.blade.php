@@ -22,6 +22,7 @@
                 <div class="p-6 bg-white border-b border-gray-200">
                     <h2 class="text-lg font-bold mb-4">Appliance Management</h2>
                     @livewire('appliance-form')
+                    @livewire('power-summary-chart')
                 </div>
             </div>
         </div>

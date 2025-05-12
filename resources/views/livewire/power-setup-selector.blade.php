@@ -22,7 +22,13 @@
                     class="text-sm text-blue-600 hover:underline mt-2">
                 Edit "{{ $currentSetup->name }}"
             </button>
+            <button wire:click="deleteSetup"
+                    onclick="return confirm('Are you sure you want to delete this setup?')"
+                    class="text-sm text-red-600 hover:underline ml-4">
+                Delete Setup
+            </button>
         @endif
+
 
 
 
