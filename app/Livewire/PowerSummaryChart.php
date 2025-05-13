@@ -39,12 +39,29 @@ class PowerSummaryChart extends Component
                 'wh' => round($adjustedWh, 2),
             ];
         })->toArray();
-        $this->dispatch('chart-data-updated', [
-            'data' => $this->applianceData,
-            'type' => $this->chartType,
-        ]);
 
+        $this->dispatchChartData(); // ✅ reuse here too
     }
+
+
+    public function updatedChartType()
+    {
+        logger('Chart type changed to: ' . $this->chartType);
+
+        if ($this->selectedSetupId && count($this->applianceData)) {
+            $this->dispatch('chart-data-updated', data: $this->applianceData, type: $this->chartType);
+        }
+    }
+
+
+
+    public function dispatchChartData()
+    {
+        $this->dispatch('chart-data-updated', data: $this->applianceData, type: $this->chartType);
+    }
+
+
+
 
     public function render()
     {
