@@ -12,7 +12,20 @@ class PowerSummaryChart extends Component
 
     public string $chartType = 'pie';
 
-    protected $listeners = ['setupChanged' => 'loadChartData'];
+    protected $listeners = ['setupChanged' => 'loadChartData','chartImageCaptured' => 'storeChartImage', 'inverterImageCaptured' => 'storeInverterImage',];
+
+    public string $chartImage = '';
+    public string $inverterImage = '';
+
+    public function storeChartImage(string $image)
+    {
+        session(['chart_image' => $image]);
+    }
+
+    public function storeInverterImage(string $image)
+    {
+        session(['inverter_image' => $image]);
+    }
 
     public function loadChartData($id)
     {

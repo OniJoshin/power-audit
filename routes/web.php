@@ -2,10 +2,14 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PdfExportController;
 
 Route::get('/', function () {
     return view('welcome');
 });
+
+Route::get('/pdf/{setup}', [PdfExportController::class, 'export'])->name('pdf.export');
+
 
 Route::get('/dashboard', function () {
     return view('dashboard');

@@ -4,6 +4,7 @@
                 class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium">
             {{ $showCreateForm ? 'Cancel' : 'Create New Power Setup' }}
         </button>
+        
 
         <label class="block font-semibold text-gray-700 mb-1 mt-4">Select Power Setup</label>
         <select
@@ -18,15 +19,25 @@
 
 
        @if ($currentSetup)
-            <button wire:click="startEditingSetup"
-                    class="text-sm text-blue-600 hover:underline mt-2">
-                Edit "{{ $currentSetup->name }}"
-            </button>
-            <button wire:click="deleteSetup"
-                    onclick="return confirm('Are you sure you want to delete this setup?')"
-                    class="text-sm text-red-600 hover:underline ml-4">
-                Delete Setup
-            </button>
+            <div class="flex justify-between items-center mt-6">
+                <a href="{{ route('pdf.export', $currentSetup->id) }}"
+                    target="_blank"
+                    class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                    Download PDF Report
+                </a>
+                <div class="flex gap-4">
+                    <button wire:click="startEditingSetup"
+                            class="text-sm text-blue-600 hover:underline">
+                        Edit "{{ $currentSetup->name }}"
+                    </button>
+                    <button wire:click="deleteSetup"
+                            onclick="return confirm('Are you sure you want to delete this setup?')"
+                            class="text-sm text-red-600 hover:underline">
+                        Delete Setup
+                    </button>
+                </div>
+            </div>
+            
         @endif
 
 

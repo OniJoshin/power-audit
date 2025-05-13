@@ -83,6 +83,13 @@
                         }
                     }
                 });
+
+                const canvas = document.getElementById('powerChart');
+                if (canvas) {
+                    const chartImage = canvas.toDataURL('image/png');
+
+                    Livewire.dispatch('chartImageCaptured', { image: chartImage });
+                }
             });
 
             // Inverter vs Native Load Chart
@@ -148,6 +155,12 @@
                         }
                     }
                 });
+                const canvas = document.getElementById('inverterNativeChart');
+                if (canvas) {
+                    const inverterImage = canvas.toDataURL('image/png');
+
+                    Livewire.dispatch('inverterImageCaptured', { image: inverterImage });
+                }
             });
         });
     </script>
