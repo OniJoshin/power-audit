@@ -10,12 +10,16 @@ class PowerSummaryChart extends Component
     public $selectedSetupId;
     public $applianceData = [];
 
-    public string $chartType = 'bar';
+    public string $chartType = 'pie';
 
     protected $listeners = ['setupChanged' => 'loadChartData'];
 
     public function loadChartData($id)
     {
+        $nativeAh = 0;
+        $inverterAh = 0;
+        $lostAh = 0;
+
         $this->selectedSetupId = $id;
 
         $setup = PowerSetup::where('id', $id)
@@ -28,19 +32,35 @@ class PowerSummaryChart extends Component
             return;
         }
 
-        $this->applianceData = $setup->appliances->map(function ($appliance) use ($setup) {
+        $this->applianceData = $setup->appliances->map(function ($appliance) use ($setup, &$nativeAh, &$inverterAh, &$lostAh) {
             $baseWh = $appliance->watts * $appliance->hours * $appliance->quantity;
-            $adjustedWh = $appliance->voltage == 230
-                ? $baseWh / ($setup->inverter_efficiency / 100)
-                : $baseWh;
+
+            if ($appliance->voltage == 230) {
+                $adjustedWh = $baseWh / ($setup->inverter_efficiency / 100);
+                $lostWh = $adjustedWh - $baseWh;
+                $lostAh += $lostWh / $setup->system_voltage;
+                $inverterAh += $adjustedWh / $setup->system_voltage;
+            } else {
+                $nativeAh += $baseWh / $setup->system_voltage;
+            }
 
             return [
                 'name' => $appliance->name,
-                'wh' => round($adjustedWh, 2),
+                'ah' => round(($appliance->voltage == 230 ? $adjustedWh : $baseWh) / $setup->system_voltage, 2),
             ];
         })->toArray();
 
-        $this->dispatchChartData(); // ✅ reuse here too
+        $totalAh = $nativeAh + $inverterAh;
+        $inefficiencyPercent = $totalAh > 0 ? round(($lostAh / $totalAh) * 100) : 0;
+
+        $this->dispatch('chart-data-updated', data: $this->applianceData, type: $this->chartType);
+
+        $this->dispatch('load-inverter-native-data',
+            native: round($nativeAh, 2),
+            inverter: round($inverterAh, 2),
+            inefficiency: $inefficiencyPercent,
+            lostAh: round($lostAh, 2),
+        );
     }
 
 
@@ -53,12 +73,6 @@ class PowerSummaryChart extends Component
         }
     }
 
-
-
-    public function dispatchChartData()
-    {
-        $this->dispatch('chart-data-updated', data: $this->applianceData, type: $this->chartType);
-    }
 
 
 
