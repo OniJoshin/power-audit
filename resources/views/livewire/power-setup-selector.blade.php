@@ -4,6 +4,24 @@
                 class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded text-sm font-medium">
             {{ $showCreateForm ? 'Cancel' : 'Create New Power Setup' }}
         </button>
+        <form action="{{ route('setups.import') }}" method="POST" enctype="multipart/form-data" class="mb-4">
+            @csrf
+            <input type="file" name="file" accept=".csv,.xlsx" required>
+            <button type="submit" class="ml-2 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                Import Power Setups
+            </button>
+        </form>
+        <form action="{{ route('audit.import') }}" method="POST" enctype="multipart/form-data">
+            @csrf
+            <input type="file" name="file" accept=".xlsx" required>
+            <label class="ml-2">
+                <input type="checkbox" name="dry_run" value="1"> Dry-run (preview only)
+            </label>
+            <button type="submit" class="ml-2 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
+                Import Full Power Audit
+            </button>
+        </form>
+
         
 
         <label class="block font-semibold text-gray-700 mb-1 mt-4">Select Power Setup</label>

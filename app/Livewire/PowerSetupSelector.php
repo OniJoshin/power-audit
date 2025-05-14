@@ -71,10 +71,12 @@ class PowerSetupSelector extends Component
     {
         $this->validate([
             'newSetupName' => [
-                'required|string|max:255',
+                'required',
+                'string',
+                'max:255',
                 Rule::unique('power_setups', 'name')->where(fn ($query) =>
                     $query->where('user_id', Auth::id())
-                )
+                ),
             ],
             'systemVoltage' => 'required|numeric|min:1',
             'inverterEfficiency' => 'required|numeric|between:50,100',

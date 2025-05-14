@@ -75,7 +75,22 @@
                 <svg class="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5v9a2.25 2.25 0 01-1.2 2L12 21.75l-7.05-3.25a2.25 2.25 0 01-1.2-2v-9a2.25 2.25 0 011.2-2L12 2.25l7.05 3.25a2.25 2.25 0 011.2 2z" />
                 </svg>
-                Appliances in Setup
+                Appliances in "{{ $setup->name }}"
+                <a href="{{ url('/export/appliances/' . $selectedSetupId) }}" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                    Export CSV
+                </a>
+                <a href="{{ url('/export/appliances/all') }}" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">
+                    Export All Setups (XLSX)
+                </a>
+                <form action="{{ route('appliances.import', $selectedSetupId) }}" method="POST" enctype="multipart/form-data" class="mb-4">
+                    @csrf
+                    <input type="file" name="file" accept=".csv,.xlsx" required>
+                    <button type="submit" class="ml-2 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                        Import Appliances
+                    </button>
+                </form>
+
+
             </h3>
 
             <ul class="space-y-4">
