@@ -19,12 +19,7 @@
 
 
        @if ($currentSetup)
-            <div class="flex justify-between items-center mt-6">
-                <a href="{{ route('pdf.export', $currentSetup->id) }}"
-                    target="_blank"
-                    class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-                    Download PDF Report
-                </a>
+            <div class="flex justify-between items-center mt-6">                
                 <div class="flex gap-4">
                     <button wire:click="startEditingSetup"
                             class="text-sm text-blue-600 hover:underline">
@@ -39,9 +34,6 @@
             </div>
             
         @endif
-
-
-
 
         @if ($editingSetup)
             <div class="mt-4 space-y-3 bg-gray-50 border border-gray-300 rounded p-4">

@@ -16,15 +16,25 @@ class PowerSummaryChart extends Component
 
     public string $chartImage = '';
     public string $inverterImage = '';
+    public bool $canDownloadPdf = false;
 
     public function storeChartImage(string $image)
     {
         session(['chart_image' => $image]);
+         $this->checkIfImagesReady();
     }
 
     public function storeInverterImage(string $image)
     {
         session(['inverter_image' => $image]);
+         $this->checkIfImagesReady();
+    }
+
+    public function checkIfImagesReady()
+    {
+        if (session('chart_image') && session('inverter_image')) {
+            $this->canDownloadPdf = true;
+        }
     }
 
     public function loadChartData($id)

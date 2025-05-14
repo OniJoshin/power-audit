@@ -101,12 +101,12 @@
 
        @if($chartBase64)
             <h2>Ah Usage per Appliance (Chart)</h2>
-            <img src="{{ $chartBase64 }}" style="max-width: 100%; height: auto; margin-top: 10px;" />
+            <img src="data:image/png;base64,{{ $chartBase64 }}" style="width:100%; height:auto" />
         @endif
 
         @if($inverterBase64)
             <h2>Inverter vs Native Load (Chart)</h2>
-            <img src="{{ $inverterBase64 }}" style="max-width: 100%; height: auto; margin-top: 10px;" />
+            <img src="data:image/png;base64,{{ $inverterBase64 }}" style="width:100%; height:auto;" />
         @endif
 
 

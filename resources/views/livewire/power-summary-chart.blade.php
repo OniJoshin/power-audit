@@ -1,6 +1,20 @@
 <div class="w-full max-w-4xl mx-auto">
+    @if ($selectedSetupId)
+        <div class="flex justify-end mt-6">
+            @if ($canDownloadPdf)
+                <a href="{{ route('pdf.export', $selectedSetupId) }}"
+                target="_blank"
+                class="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+                Download PDF Report
+                </a>
+            @else
+                <p class="text-gray-500 italic">Preparing charts… please wait.</p>
+            @endif
+        </div>
+    @endif
+
     {{-- Efficiency Score Display --}}
-    <div id="efficiencyScoreDisplay" class="mt-6 text-center text-xl font-semibold text-gray-800"></div>
+    <div wire:ignore id="efficiencyScoreDisplay" class="mt-6 text-center text-xl font-semibold text-gray-800"></div>
 
     {{-- Appliance-wise Ah Usage Chart --}}
     <div wire:ignore class="mt-12">
@@ -69,6 +83,18 @@
                         }]
                     },
                     options: {
+                        animation: {
+                            onComplete: () => {
+                                setTimeout(() => {
+                                    const canvas = document.getElementById('powerChart');
+                                    if (canvas) {
+                                        const chartImage = canvas.toDataURL('image/png');
+                                        console.log('Captured chart image', chartImage);
+                                        Livewire.dispatch('chartImageCaptured', { image: chartImage });
+                                    }
+                                }, 500);
+                            }
+                        },
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
@@ -76,20 +102,30 @@
                                 display: true,
                                 position: 'bottom',
                                 labels: {
-                                    color: '#333',
-                                    padding: 16
+                                    generateLabels: function(chart) {
+                                        const data = chart.data;
+                                        const dataset = data.datasets[0];
+                                        const total = dataset.data.reduce((sum, val) => sum + val, 0);
+
+                                        return data.labels.map((label, i) => {
+                                            const value = dataset.data[i];
+                                            const percentage = ((value / total) * 100).toFixed(1);
+
+                                            return {
+                                                text: `${label}: ${value} Ah (${percentage}%)`,
+                                                fillStyle: dataset.backgroundColor[i],
+                                                strokeStyle: dataset.borderColor || '#000',
+                                                lineWidth: 1,
+                                                hidden: chart.getDatasetMeta(0).data[i].hidden,
+                                                index: i
+                                            };
+                                        });
+                                    }
                                 }
                             }
                         }
                     }
                 });
-
-                const canvas = document.getElementById('powerChart');
-                if (canvas) {
-                    const chartImage = canvas.toDataURL('image/png');
-
-                    Livewire.dispatch('chartImageCaptured', { image: chartImage });
-                }
             });
 
             // Inverter vs Native Load Chart
@@ -136,6 +172,18 @@
                         }]
                     },
                     options: {
+                        animation: {
+                            onComplete: () => {
+                                setTimeout(() => {
+                                    const canvas = document.getElementById('inverterNativeChart');
+                                    if (canvas) {
+                                        const inverterImage = canvas.toDataURL('image/png');
+                                        console.log('Captured inverter image', inverterImage);
+                                        Livewire.dispatch('inverterImageCaptured', { image: inverterImage });
+                                    }
+                                }, 500);
+                            }
+                        },
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
@@ -143,8 +191,25 @@
                                 display: true,
                                 position: 'bottom',
                                 labels: {
-                                    color: '#333',
-                                    padding: 16
+                                    generateLabels: function(chart) {
+                                        const dataset = chart.data.datasets[0];
+                                        const labels = chart.data.labels;
+                                        const total = dataset.data.reduce((sum, val) => sum + val, 0);
+
+                                        return labels.map((label, i) => {
+                                            const value = dataset.data[i];
+                                            const percentage = ((value / total) * 100).toFixed(1);
+
+                                            return {
+                                                text: `${label}: ${value.toFixed(1)} Ah (${percentage}%)`,
+                                                fillStyle: dataset.backgroundColor[i],
+                                                strokeStyle: dataset.borderColor || '#000',
+                                                lineWidth: 1,
+                                                hidden: chart.getDatasetMeta(0).data[i].hidden,
+                                                index: i
+                                            };
+                                        });
+                                    }
                                 }
                             },
                             tooltip: {
@@ -155,12 +220,6 @@
                         }
                     }
                 });
-                const canvas = document.getElementById('inverterNativeChart');
-                if (canvas) {
-                    const inverterImage = canvas.toDataURL('image/png');
-
-                    Livewire.dispatch('inverterImageCaptured', { image: inverterImage });
-                }
             });
         });
     </script>

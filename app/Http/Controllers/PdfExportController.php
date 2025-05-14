@@ -54,8 +54,29 @@ class PdfExportController extends Controller
         $inefficiencyPercent = $totalAh > 0 ? round(($lostAh / $totalAh) * 100) : 0;
         $recommendedAh = $totalAh / ($setup->battery_type === 'lithium' ? 0.9 : 0.5) * $setup->autonomy_days;
 
+        // Store temporary chart image
         $chartBase64 = session('chart_image');
         $inverterBase64 = session('inverter_image');
+
+        // Strip prefix if present
+        if (str_starts_with($chartBase64, 'data:image')) {
+            [, $chartBase64] = explode(',', $chartBase64);
+        }
+        if (str_starts_with($inverterBase64, 'data:image')) {
+            [, $inverterBase64] = explode(',', $inverterBase64);
+        }
+
+        // Write temporary images
+        /* $chartPath = storage_path('app/chart.png');
+        $inverterPath = storage_path('app/inverter.png');
+        
+
+        file_put_contents($chartPath, base64_decode($chartBase64));
+        file_put_contents($inverterPath, base64_decode($inverterBase64));
+
+        $chartPath = str_replace('\\', '/', $chartPath);
+        $inverterPath = str_replace('\\', '/', $inverterPath); */
+
 
         $pdf = Pdf::loadView('pdf.report', [
             'setup' => $setup,
@@ -69,8 +90,16 @@ class PdfExportController extends Controller
             'inverterBase64' => $inverterBase64,
         ]);
 
+        //dd(file_exists($chartPath), $chartPath);
+        //dd(strlen($chartBase64), substr($chartBase64, 0, 30));
+
         // Return and then forget the session data
         session()->forget(['chart_image', 'inverter_image']);
-        return $pdf->download('power-audit-report.pdf');
+       /*  unlink($chartPath);
+        unlink($inverterPath); */
+
+      
+
+        return $pdf->download('power-audit-report.pdf');        
     }
 }

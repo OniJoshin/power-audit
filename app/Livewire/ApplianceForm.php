@@ -12,6 +12,8 @@ class ApplianceForm extends Component
 {
     public $selectedSetupId = null;
     public $editingApplianceId = null;
+    public PowerSetup|null $setup = null;
+
 
 
     public $appliances;
@@ -20,10 +22,6 @@ class ApplianceForm extends Component
     public $watts = '';
     public $hours = '';
     public $quantity = 1;
-    public $inverterEfficiency = 85; // Default to 85%
-    public $systemVoltage = 12; // Default system voltage
-    public $batteryType = 'lead'; // or 'lithium'
-    public $autonomyDays = 2;
     public $formResetCounter = 0;
 
     public $dailyTotalWatts = 0;
@@ -37,12 +35,6 @@ class ApplianceForm extends Component
     protected $listeners = ['setupChanged' => 'loadSetup'];
 
 
-    public function updated($property)
-    {
-        if (in_array($property, ['systemVoltage', 'inverterEfficiency', 'batteryType', 'autonomyDays'])) {
-            $this->calculateTotals(); // method that recalculates everything
-        }
-    }
     public function mount()
     {
         $this->loadAppliances();
@@ -124,34 +116,45 @@ class ApplianceForm extends Component
         if (empty($id)) {
             $this->selectedSetupId = null;
             $this->resetForm();
+            $this->setup = null;
             $this->appliances = [];
             return;
         }
 
         $this->selectedSetupId = $id;
 
-        $setup = PowerSetup::where('id', $id)
+        $this->setup = PowerSetup::where('id', $id)
             ->where('user_id', Auth::id())
             ->with('appliances')
             ->first();
 
-        if (!$setup) {
+        if (!$this->setup) {
             $this->selectedSetupId = null;
             return;
         }
 
-        $this->systemVoltage = $setup->system_voltage;
-        $this->inverterEfficiency = $setup->inverter_efficiency;
-        $this->batteryType = $setup->battery_type;
-        $this->autonomyDays = $setup->autonomy_days;
-
-        $this->appliances = $setup->appliances->toArray();
+        $this->appliances = $this->setup->appliances->toArray();
     }
 
 
 
     public function calculateTotals()
     {
+         if (!$this->setup) {
+            $this->enhancedAppliances = [];
+            $this->dailyTotalWatts = 0;
+            $this->dailyTotalWatts12V = 0;
+            $this->dailyTotalWatts230V = 0;
+            $this->totalWhWithInverterLoss = 0;
+            $this->totalAh = 0;
+            $this->recommendedAh = 0;
+            return;
+        }
+        $systemVoltage = $this->setup->system_voltage;
+        $inverterEfficiency = $this->setup->inverter_efficiency;
+        $batteryType = $this->setup->battery_type;
+        $autonomyDays = $this->setup->autonomy_days;
+
         $dailyTotalWatts = 0;
         $dailyTotalWatts12V = 0;
         $dailyTotalWatts230V = 0;
@@ -165,10 +168,10 @@ class ApplianceForm extends Component
 
             $baseWh = $watts * $hours * $qty;
             $adjustedWh = $voltage == '230'
-                ? $baseWh / ($this->inverterEfficiency / 100)
+                ? $baseWh / ($inverterEfficiency / 100)
                 : $baseWh;
 
-            $ah = $this->systemVoltage > 0 ? $adjustedWh / $this->systemVoltage : 0;
+            $ah = $systemVoltage > 0 ? $adjustedWh / $systemVoltage : 0;
 
             if ($voltage == '230') {
                 $dailyTotalWatts230V += $adjustedWh;
@@ -184,10 +187,10 @@ class ApplianceForm extends Component
             ]);
         }
 
-        $usablePercent = $this->batteryType === 'lithium' ? 0.9 : 0.5;
-        $requiredWh = $dailyTotalWatts * $this->autonomyDays;
-        $recommendedAh = $this->systemVoltage > 0
-            ? round($requiredWh / ($this->systemVoltage * $usablePercent), 2)
+        $usablePercent = $batteryType === 'lithium' ? 0.9 : 0.5;
+        $requiredWh = $dailyTotalWatts * $autonomyDays;
+        $recommendedAh = $systemVoltage > 0
+            ? round($requiredWh / ($systemVoltage * $usablePercent), 2)
             : 0;
 
         // Assign results to component properties
@@ -196,10 +199,8 @@ class ApplianceForm extends Component
         $this->dailyTotalWatts12V = round($dailyTotalWatts12V, 2);
         $this->dailyTotalWatts230V = round($dailyTotalWatts230V, 2);
         $this->totalWhWithInverterLoss = round($dailyTotalWatts12V + $dailyTotalWatts230V, 2);
-        $this->totalAh = $this->systemVoltage > 0 ? round($this->totalWhWithInverterLoss / $this->systemVoltage, 2) : 0;
-        $this->recommendedAh = $this->systemVoltage > 0
-            ? round($this->totalWhWithInverterLoss / ($this->systemVoltage * $usablePercent), 2)
-            : 0;
+        $this->totalAh = $systemVoltage > 0 ? round($this->totalWhWithInverterLoss / $systemVoltage, 2) : 0;
+        $this->recommendedAh = $recommendedAh;
     }
 
     public function editAppliance($id)
