@@ -11,7 +11,14 @@
                 <div class="p-6 bg-white border-b border-gray-200">
                     <h1 class="text-2xl font-bold mb-4">Power Setup and Appliance Management</h1>
                     <p class="mb-4">Manage your power setups and appliances efficiently.</p>
-
+                    @if(session('audit_backup_filename'))
+                        <div class="mt-4">
+                            <a href="{{ route('audit.backup.download') }}"
+                            class="text-blue-600 underline hover:text-blue-800">
+                                Download Backup from Last Import
+                            </a>
+                        </div>
+                    @endif
                     <h2 class="text-lg font-bold mb-1">Power Setup</h2>
                     @livewire('power-setup-selector')
                 </div>

@@ -57,6 +57,8 @@ class FullAuditImportController extends Controller
         // ✅ Step 3: Backup and full import
         $backupFilename = "backups/power_audit_backup_user_{$userId}_{$timestamp}.xlsx";
         Excel::store(new AllAppliancesExport(), $backupFilename);
+        session()->put('audit_backup_filename', $backupFilename);
+
 
         Excel::import(new FullAuditImport(), $request->file('file'));
 

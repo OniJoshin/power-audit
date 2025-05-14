@@ -6,6 +6,7 @@ use App\Http\Controllers\PdfExportController;
 use App\Exports\AppliancesExport;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\AllAppliancesExport;
+use App\Models\PowerSetup;
 
 Route::get('/', function () {
     return view('welcome');
@@ -35,16 +36,34 @@ Route::post('/import/full-audit', [\App\Http\Controllers\FullAuditImportControll
 Route::post('/import/appliances/{setup}', [App\Http\Controllers\ApplianceImportController::class, 'import'])
      ->name('appliances.import')
      ->middleware('auth');
+
 Route::get('/import/review', function () {
     if (!session()->has('audit_dry_run_data')) {
         return redirect()->back()->with('error', 'No dry-run data found.');
     }
 
+    $existingSetupNames = PowerSetup::where('user_id', Auth::id())
+        ->pluck('name')
+        ->map(fn ($name) => strtolower(trim($name)))
+        ->toArray();
+
     return view('audit.review', [
         'sheets' => session('audit_dry_run_data'),
         'timestamp' => session('audit_dry_run_timestamp'),
+        'existingSetups' => $existingSetupNames,
     ]);
 })->name('audit.review')->middleware('auth');
+
+Route::get('/download/latest-backup', function () {
+    $filename = session('audit_backup_filename');
+
+    if (!$filename || !Storage::exists($filename)) {
+        return redirect()->back()->with('error', 'Backup file not found.');
+    }
+
+    return Storage::download($filename);
+})->middleware('auth')->name('audit.backup.download');
+
 
 
 
