@@ -35,9 +35,14 @@ class ApplianceForm extends Component
     protected $listeners = ['setupChanged' => 'loadSetup'];
 
 
-    public function mount()
+    public function mount($selectedSetupId = null)
     {
-        $this->loadAppliances();
+        if ($selectedSetupId) {
+            $this->loadSetup($selectedSetupId);
+        } else {
+            $this->appliances = [];
+            $this->setup = null;
+        }
     }
 
     public function loadAppliances()

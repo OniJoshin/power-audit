@@ -1,78 +1,97 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\PdfExportController;
+use App\Http\Controllers\PowerSetupImportController;
+use App\Http\Controllers\ApplianceImportController;
+use App\Http\Controllers\FullAuditImportController;
+use App\Http\Controllers\Auth\LogoutController;
 use App\Exports\AppliancesExport;
-use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\AllAppliancesExport;
 use App\Models\PowerSetup;
+use Maatwebsite\Excel\Facades\Excel;
+
+// ─────────────────────────────────────────────
+// Public Routes
+// ─────────────────────────────────────────────
 
 Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/pdf/{setup}', [PdfExportController::class, 'export'])->name('pdf.export');
+// ─────────────────────────────────────────────
+// Authenticated Routes
+// ─────────────────────────────────────────────
 
+Route::middleware(['auth', 'verified'])->group(function () {
 
-Route::get('/dashboard', function () {
-    return view('dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
+    // Dashboard (home)
+    Route::get('/dashboard', fn () => view('dashboard'))->name('dashboard');
 
-Route::get('/export/appliances/all', function () {
-    return Excel::download(new AllAppliancesExport(), 'all_appliances.xlsx');
-})->middleware('auth');
-Route::get('/export/appliances/{setup}', function ($setupId) {
-    return Excel::download(new AppliancesExport($setupId), 'appliances.csv');
-})->middleware(['auth']);
+    // Power Setups
+    Route::view('/setups', 'setups.index')->name('setups.index');
+    Route::get('/setups/{id}/appliances', fn ($id) => view('appliances.index', ['selectedSetupId' => $id]))
+        ->name('appliances.index');
+    Route::get('/setups/{id}/summary', fn ($id) => view('summary.index', ['selectedSetupId' => $id]))
+        ->name('summary.index');
 
+    // Import/Export UI
+    Route::view('/data', 'data.index')->name('data.index');
 
-Route::post('/import/setups', [App\Http\Controllers\PowerSetupImportController::class, 'import'])
-     ->name('setups.import')
-     ->middleware('auth');
-Route::post('/import/full-audit', [\App\Http\Controllers\FullAuditImportController::class, 'import'])
-     ->name('audit.import')
-     ->middleware('auth');
-Route::post('/import/appliances/{setup}', [App\Http\Controllers\ApplianceImportController::class, 'import'])
-     ->name('appliances.import')
-     ->middleware('auth');
+    // PDF Export
+    Route::get('/pdf/{setup}', [PdfExportController::class, 'export'])->name('pdf.export');
 
-Route::get('/import/review', function () {
-    if (!session()->has('audit_dry_run_data')) {
-        return redirect()->back()->with('error', 'No dry-run data found.');
-    }
+    // Excel/CSV Exports
+    Route::get('/export/appliances/all', fn () => Excel::download(new AllAppliancesExport(), 'all_appliances.xlsx'));
+    Route::get('/export/appliances/{setup}', fn ($setupId) => Excel::download(new AppliancesExport($setupId), 'appliances.csv'));
 
-    $existingSetupNames = PowerSetup::where('user_id', Auth::id())
-        ->pluck('name')
-        ->map(fn ($name) => strtolower(trim($name)))
-        ->toArray();
+    // Imports
+    Route::post('/import/setups', [PowerSetupImportController::class, 'import'])->name('setups.import');
+    Route::post('/import/appliances/{setup}', [ApplianceImportController::class, 'import'])->name('appliances.import');
+    Route::post('/import/full-audit', [FullAuditImportController::class, 'import'])->name('audit.import');
 
-    return view('audit.review', [
-        'sheets' => session('audit_dry_run_data'),
-        'timestamp' => session('audit_dry_run_timestamp'),
-        'existingSetups' => $existingSetupNames,
-    ]);
-})->name('audit.review')->middleware('auth');
+    // Dry-run review
+    Route::get('/import/review', function () {
+        if (!session()->has('audit_dry_run_data')) {
+            return redirect()->back()->with('error', 'No dry-run data found.');
+        }
 
-Route::get('/download/latest-backup', function () {
-    $filename = session('audit_backup_filename');
+        $existingSetupNames = PowerSetup::where('user_id', Auth::id())
+            ->pluck('name')
+            ->map(fn ($name) => strtolower(trim($name)))
+            ->toArray();
 
-    if (!$filename || !Storage::exists($filename)) {
-        return redirect()->back()->with('error', 'Backup file not found.');
-    }
+        return view('audit.review', [
+            'sheets' => session('audit_dry_run_data'),
+            'timestamp' => session('audit_dry_run_timestamp'),
+            'existingSetups' => $existingSetupNames,
+        ]);
+    })->name('audit.review');
 
-    return Storage::download($filename);
-})->middleware('auth')->name('audit.backup.download');
+    // Backup download
+    Route::get('/download/latest-backup', function () {
+        $filename = session('audit_backup_filename');
+        if (!$filename || !Storage::exists($filename)) {
+            return redirect()->back()->with('error', 'Backup file not found.');
+        }
+        return Storage::download($filename);
+    })->name('audit.backup.download');
 
-
-
-
-Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    // Profile
+    Route::prefix('profile')->name('profile.')->group(function () {
+        Route::get('/', [ProfileController::class, 'edit'])->name('edit');
+        Route::patch('/', [ProfileController::class, 'update'])->name('update');
+        Route::delete('/', [ProfileController::class, 'destroy'])->name('destroy');
+    });
 });
 
+// ─────────────────────────────────────────────
+// Logout
+// ─────────────────────────────────────────────
 
+Route::post('/logout', [LogoutController::class, 'destroy'])->name('logout');
 
 require __DIR__.'/auth.php';

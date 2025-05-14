@@ -44,10 +44,18 @@ class PowerSetupSelector extends Component
     }
 
 
-    public function mount()
+    public function mount($selectedSetupId = null)
     {
         $this->loadSetups();
+
+        if ($selectedSetupId) {
+            $this->selectedSetupId = $selectedSetupId;
+            $this->currentSetup = $this->setups->firstWhere('id', (int) $selectedSetupId);
+            session(['selected_setup_id' => $selectedSetupId]);
+            $this->dispatch('setupChanged', id: $selectedSetupId);
+        }
     }
+
 
     public function getCurrentSetupProperty()
     {
@@ -106,8 +114,14 @@ class PowerSetupSelector extends Component
     {
         $this->selectedSetupId = $id;
         $this->currentSetup = $this->setups->firstWhere('id', (int) $id);
+
+        // Store selected ID for sidebar
+        session(['selected_setup_id' => $id]);
+
+        // Emit to components that listen
         $this->dispatch('setupChanged', id: $id);
     }
+
 
 
    public function updatedSelectedSetupId($id)
