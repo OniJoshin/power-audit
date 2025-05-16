@@ -18,6 +18,14 @@ class PowerSummaryChart extends Component
     public string $inverterImage = '';
     public bool $canDownloadPdf = false;
 
+    public $dailyTotalWatts12V = 0;
+    public $dailyTotalWatts230V = 0;
+    public $totalWhWithInverterLoss = 0;
+    public $totalAh = 0;
+    public $recommendedAh = 0;
+    public $setup;
+
+
     public function mount($selectedSetupId = null)
     {
         if ($selectedSetupId) {
@@ -84,15 +92,19 @@ class PowerSummaryChart extends Component
         $totalAh = $nativeAh + $inverterAh;
         $inefficiencyPercent = $totalAh > 0 ? round(($lostAh / $totalAh) * 100) : 0;
 
-        $this->dispatch('chart-data-updated', data: $this->applianceData, type: $this->chartType);
+        // ✅ These are the lines you're missing:
+        $this->dailyTotalWatts12V = round($nativeAh * $setup->system_voltage, 2);
+        $this->dailyTotalWatts230V = round(($inverterAh - $lostAh) * $setup->system_voltage, 2);
+        $this->totalWhWithInverterLoss = $this->dailyTotalWatts12V + $this->dailyTotalWatts230V;
+        $this->totalAh = round($this->totalWhWithInverterLoss / $setup->system_voltage, 2);
 
-        $this->dispatch('load-inverter-native-data',
-            native: round($nativeAh, 2),
-            inverter: round($inverterAh, 2),
-            inefficiency: $inefficiencyPercent,
-            lostAh: round($lostAh, 2),
-        );
+        $usablePercent = $setup->battery_type === 'lithium' ? 0.9 : 0.5;
+        $requiredWh = $this->totalWhWithInverterLoss * $setup->autonomy_days;
+        $this->recommendedAh = round($requiredWh / ($setup->system_voltage * $usablePercent), 2);
+
+        $this->setup = $setup;
     }
+
 
 
     public function updatedChartType()
@@ -110,6 +122,35 @@ class PowerSummaryChart extends Component
 
     public function render()
     {
-        return view('livewire.power-summary-chart');
+        // If there's no setup yet, we avoid errors
+        $inverterAh = 0;
+        $nativeAh = 0;
+        $lostAh = 0;
+        $inefficiency = 0;
+
+        if ($this->setup) {
+            foreach ($this->setup->appliances as $appliance) {
+                $baseWh = $appliance->watts * $appliance->hours * $appliance->quantity;
+                if ($appliance->voltage == 230) {
+                    $adjustedWh = $baseWh / ($this->setup->inverter_efficiency / 100);
+                    $lostAh += ($adjustedWh - $baseWh) / $this->setup->system_voltage;
+                    $inverterAh += $adjustedWh / $this->setup->system_voltage;
+                } else {
+                    $nativeAh += $baseWh / $this->setup->system_voltage;
+                }
+            }
+
+            $totalAh = $nativeAh + $inverterAh;
+            $inefficiency = $totalAh > 0 ? round(($lostAh / $totalAh) * 100) : 0;
+        }
+
+        return view('livewire.power-summary-chart', [
+            'applianceAhData' => $this->applianceData,
+            'nativeAh' => round($nativeAh, 2),
+            'inverterAh' => round($inverterAh, 2),
+            'inefficiency' => $inefficiency,
+            'lostAh' => round($lostAh, 2),
+        ]);
     }
+
 }

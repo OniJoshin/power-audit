@@ -99,14 +99,14 @@
             <p><strong>Recommended Battery Capacity:</strong> {{ $recommendedAh }} Ah for {{ $setup->autonomy_days }} day(s)</p>
         </div>
 
-       @if($chartBase64)
-            <h2>Ah Usage per Appliance (Chart)</h2>
-            <img src="data:image/png;base64,{{ $chartBase64 }}" style="width:100%; height:auto" />
+        @if(session('power_chart_image'))
+        <h2>Ah Usage per Appliance (Chart)</h2>
+            <img src="{{ session('power_chart_image') }}" alt="Power Chart" style="max-width:100%;">
         @endif
 
-        @if($inverterBase64)
+        @if(session('inverter_chart_image'))
             <h2>Inverter vs Native Load (Chart)</h2>
-            <img src="data:image/png;base64,{{ $inverterBase64 }}" style="width:100%; height:auto;" />
+            <img src="{{ session('inverter_chart_image') }}" alt="Inverter Chart" style="max-width:100%;">
         @endif
 
 

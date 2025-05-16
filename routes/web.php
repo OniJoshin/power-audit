@@ -13,6 +13,7 @@ use App\Exports\AppliancesExport;
 use App\Exports\AllAppliancesExport;
 use App\Models\PowerSetup;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Http\Controllers\ChartImageController;
 
 // ─────────────────────────────────────────────
 // Public Routes
@@ -35,8 +36,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::view('/setups', 'setups.index')->name('setups.index');
     Route::get('/setups/{id}/appliances', fn ($id) => view('appliances.index', ['selectedSetupId' => $id]))
         ->name('appliances.index');
-    Route::get('/setups/{id}/summary', fn ($id) => view('summary.index', ['selectedSetupId' => $id]))
-        ->name('summary.index');
+    Route::post('/setups/select', function (\Illuminate\Http\Request $request) {
+        session(['selected_setup_id' => $request->input('setup_id')]);
+        return redirect()->route('appliances.index', $request->input('setup_id'));
+    })->name('setups.select');
+
+    Route::get('/power-summary/{setupId}', [\App\Http\Controllers\PowerSummaryController::class, 'show'])->name('power-summary.show');
+    Route::post('/charts/upload', [ChartImageController::class, 'store'])->name('charts.upload');
+
+
+
 
     // Import/Export UI
     Route::view('/data', 'data.index')->name('data.index');
@@ -79,6 +88,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         }
         return Storage::download($filename);
     })->name('audit.backup.download');
+
+    
 
     // Profile
     Route::prefix('profile')->name('profile.')->group(function () {

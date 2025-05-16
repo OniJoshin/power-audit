@@ -115,9 +115,6 @@ class PowerSetupSelector extends Component
         $this->selectedSetupId = $id;
         $this->currentSetup = $this->setups->firstWhere('id', (int) $id);
 
-        // Store selected ID for sidebar
-        session(['selected_setup_id' => $id]);
-
         // Emit to components that listen
         $this->dispatch('setupChanged', id: $id);
     }
@@ -130,7 +127,6 @@ class PowerSetupSelector extends Component
         $this->dispatch('setupChanged', id: $id);
 
         $this->dispatch('chart-data-updated', data: $this->applianceData);
-
     }
 
 
